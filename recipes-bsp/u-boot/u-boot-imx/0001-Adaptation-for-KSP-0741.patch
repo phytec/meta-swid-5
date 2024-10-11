@@ -1,0 +1,248 @@
+From 8919962140942c4d5372bf1f411a364fb024d23d Mon Sep 17 00:00:00 2001
+From: Nicolas Raimundo <n.raimundo@phytec.fr>
+Date: Fri, 11 Oct 2024 11:16:50 +0200
+Subject: [PATCH] Adaptation for KSP-0741
+
+---
+ arch/arm/dts/Makefile                 |  3 +-
+ arch/arm/dts/imx93-phyboard-nash.dts  | 74 ++++++++++++++++++++++-----
+ arch/arm/dts/imx93-phycore-som.dtsi   | 49 ++----------------
+ configs/imx93-phyboard-nash_defconfig |  4 +-
+ 4 files changed, 68 insertions(+), 62 deletions(-)
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index d4d5c87354..9857b0de49 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -1092,8 +1092,7 @@ dtb-$(CONFIG_ARCH_IMX9) += \
+ 	imx91p-11x11-evk.dtb \
+ 	imx91p-9x9-qsb-ontat-wvga-panel.dtb \
+ 	imx91p-9x9-qsb-spinand.dtb \
+-	imx93-phyboard-nash.dtb \
+-	imx93-phyboard-segin.dtb
++	imx93-phyboard-nash.dtb
+ 
+ dtb-$(CONFIG_ARCH_IMXRT) += imxrt1050-evk.dtb \
+ 	imxrt1020-evk.dtb \
+diff --git a/arch/arm/dts/imx93-phyboard-nash.dts b/arch/arm/dts/imx93-phyboard-nash.dts
+index 63cea3b103..c00e66eb16 100644
+--- a/arch/arm/dts/imx93-phyboard-nash.dts
++++ b/arch/arm/dts/imx93-phyboard-nash.dts
+@@ -25,7 +25,7 @@
+ 
+ 	reg_can1_stb: regulator-can1-stb {
+ 		compatible = "regulator-fixed";
+-		gpio = <&gpio4 16 GPIO_ACTIVE_LOW>;
++		gpio = <&gpio2 24 GPIO_ACTIVE_LOW>;
+ 		enable-active-low;
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_reg_can1_stb>;
+@@ -89,19 +89,43 @@
+ 	status = "okay";
+ };
+ 
+-&mdio {
+-	ethphy2: ethernet-phy@2 {
+-		compatible = "ethernet-phy-ieee802.3-c22";
+-		reg = <2>;
+-		interrupt-parent = <&gpio3>;
+-		interrupts = <26 IRQ_TYPE_EDGE_FALLING>;
+-		ti,rx-internal-delay = <DP83867_RGMIIDCTL_1_75_NS>;
+-		ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+-		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+-		ti,clk-output-sel = <DP83867_CLK_O_SEL_OFF>;
++&fec {
++	phy-mode = "rgmii-id";
++	phy-handle = <&ethphy1>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_fec>;
++	status = "okay";
++
++
++	mdio: mdio {
++		clock-frequency = <5000000>;
++
++		ethphy1: ethernet-phy@1 {
++			compatible = "ethernet-phy-ieee802.3-c22";
++			reg = <0>;
++			interrupt-parent = <&gpio4>;
++			interrupts = <29 IRQ_TYPE_EDGE_FALLING>;
++			ti,rx-internal-delay = <DP83867_RGMIIDCTL_1_75_NS>;
++			ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
++			ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
++			ti,clk-output-sel = <DP83867_CLK_O_SEL_OFF>;
++		};
++
++		ethphy2: ethernet-phy@2 {
++			compatible = "ethernet-phy-ieee802.3-c22";
++			reg = <2>;
++			interrupt-parent = <&gpio3>;
++			interrupts = <26 IRQ_TYPE_EDGE_FALLING>;
++			ti,rx-internal-delay = <DP83867_RGMIIDCTL_1_75_NS>;
++			ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
++			ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
++			ti,clk-output-sel = <DP83867_CLK_O_SEL_OFF>;
++		};
+ 	};
+ };
+ 
++
++
+ /* CAN */
+ &flexcan1 {
+ 	pinctrl-names = "default";
+@@ -125,7 +149,7 @@
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_rtc>;
+ 		interrupt-parent = <&gpio4>;
+-		interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
++		interrupts = <28 IRQ_TYPE_LEVEL_LOW>;
+ 		trickle-resistor-ohms = <3000>;
+ 		wakeup-source;
+ 	};
+@@ -229,6 +253,28 @@
+ 			MX93_PAD_ENET1_TXC__CCM_ENET_QOS_CLOCK_GENERATE_TX_CLK	0x58e
+ 			MX93_PAD_ENET1_TX_CTL__ENET_QOS_RGMII_TX_CTL		0x50e
+ 			MX93_PAD_CCM_CLKO1__GPIO3_IO26				0x1002
++			// MX93_PAD_ENET1_MDC__ENET_QOS_MDC 0x50e
++			// MX93_PAD_ENET1_MDIO__ENET_QOS_MDIO 0x502
++		>;
++	};
++
++	pinctrl_fec: fecgrp {
++		fsl,pins = <
++			MX93_PAD_ENET2_RD0__ENET1_RGMII_RD0		0x57e
++			MX93_PAD_ENET2_RD1__ENET1_RGMII_RD1		0x57e
++			MX93_PAD_ENET2_RD2__ENET1_RGMII_RD2		0x57e
++			MX93_PAD_ENET2_RD3__ENET1_RGMII_RD3		0x57e
++			MX93_PAD_ENET2_RXC__ENET1_RGMII_RXC   0x5fe
++			MX93_PAD_ENET2_RX_CTL__ENET1_RGMII_RX_CTL	0x57e
++			MX93_PAD_ENET2_TD0__ENET1_RGMII_TD0		0x51e
++			MX93_PAD_ENET2_TD1__ENET1_RGMII_TD1		0x51e
++			MX93_PAD_ENET2_TD2__ENET1_RGMII_TD2		0x50e
++			MX93_PAD_ENET2_TD3__ENET1_RGMII_TD3		0x50e
++			MX93_PAD_ENET2_TXC__ENET1_RGMII_TXC   0x58e
++			MX93_PAD_ENET2_TX_CTL__ENET1_RGMII_TX_CTL	0x58e
++			MX93_PAD_CCM_CLKO4__GPIO4_IO29 0x1002
++			MX93_PAD_ENET2_MDC__ENET1_MDC			0x50e
++			MX93_PAD_ENET2_MDIO__ENET1_MDIO			0x502
+ 		>;
+ 	};
+ 
+@@ -257,7 +303,7 @@
+ 
+ 	pinctrl_reg_can1_stb: regcan1stbgrp {
+ 		fsl,pins = <
+-			MX93_PAD_ENET2_TD3__GPIO4_IO16		0x31e
++			MX93_PAD_GPIO_IO24__GPIO2_IO24		0x31e
+ 		>;
+ 	};
+ 
+@@ -269,7 +315,7 @@
+ 
+ 	pinctrl_rtc: rtcgrp {
+ 		fsl,pins = <
+-			MX93_PAD_ENET2_RD2__GPIO4_IO26		0x31e
++			MX93_PAD_CCM_CLKO3__GPIO4_IO28		0x31e
+ 		>;
+ 	};
+ 
+diff --git a/arch/arm/dts/imx93-phycore-som.dtsi b/arch/arm/dts/imx93-phycore-som.dtsi
+index ede8370d25..b7736ee88e 100644
+--- a/arch/arm/dts/imx93-phycore-som.dtsi
++++ b/arch/arm/dts/imx93-phycore-som.dtsi
+@@ -57,33 +57,6 @@
+ 	status = "okay";
+ };
+ 
+-/* Ethernet */
+-&fec {
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&pinctrl_fec>;
+-	phy-mode = "rmii";
+-	phy-handle = <&ethphy1>;
+-	assigned-clocks = <&clk IMX93_CLK_ENET_TIMER1>,
+-			  <&clk IMX93_CLK_ENET_REF>,
+-			  <&clk IMX93_CLK_ENET_REF_PHY>;
+-	assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>,
+-				 <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>,
+-				 <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
+-	assigned-clock-rates = <100000000>, <50000000>, <50000000>;
+-	status = "okay";
+-
+-	mdio: mdio {
+-		clock-frequency = <5000000>;
+-		#address-cells = <1>;
+-		#size-cells = <0>;
+-
+-		ethphy1: ethernet-phy@1 {
+-			compatible = "ethernet-phy-id2000.a111", "ethernet-phy-ieee802.3-c22";
+-			reg = <1>;
+-		};
+-	};
+-};
+-
+ /* I2C3 */
+ &lpi2c3 {
+ 	clock-frequency = <400000>;
+@@ -98,8 +71,8 @@
+ 		reg = <0x25>;
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_pmic>;
+-		interrupt-parent = <&gpio4>;
+-		interrupts = <27 IRQ_TYPE_LEVEL_LOW>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <10 IRQ_TYPE_LEVEL_LOW>;
+ 
+ 		regulators {
+ 			buck1: BUCK1 {
+@@ -203,21 +176,6 @@
+ };
+ 
+ &iomuxc {
+-	pinctrl_fec: fecgrp {
+-		fsl,pins = <
+-			MX93_PAD_ENET2_MDC__ENET1_MDC			0x50e
+-			MX93_PAD_ENET2_MDIO__ENET1_MDIO			0x502
+-			MX93_PAD_ENET2_RD0__ENET1_RGMII_RD0		0x57e
+-			MX93_PAD_ENET2_RD1__ENET1_RGMII_RD1		0x57e
+-			MX93_PAD_ENET2_RXC__ENET1_RX_ER			0x5fe
+-			MX93_PAD_ENET2_RX_CTL__ENET1_RGMII_RX_CTL	0x57e
+-			MX93_PAD_ENET2_TD0__ENET1_RGMII_TD0		0x50e
+-			MX93_PAD_ENET2_TD1__ENET1_RGMII_TD1		0x50e
+-			MX93_PAD_ENET2_TX_CTL__ENET1_RGMII_TX_CTL	0x50e
+-			MX93_PAD_ENET2_TD2__ENET1_TX_CLK		0x4000050e
+-		>;
+-	};
+-
+ 	pinctrl_leds: ledsgrp {
+ 		fsl,pins = <
+ 			MX93_PAD_I2C1_SDA__GPIO1_IO01			0x31e
+@@ -233,7 +191,8 @@
+ 
+ 	pinctrl_pmic: pmicgrp {
+ 		fsl,pins = <
+-			MX93_PAD_ENET2_RD3__GPIO4_IO27			0x31e
++			//MX93_PAD_ENET2_RD3__GPIO4_IO27			0x31e
++			MX93_PAD_PDM_BIT_STREAM1__GPIO1_IO10 0x31e
+ 		>;
+ 	};
+ 
+diff --git a/configs/imx93-phyboard-nash_defconfig b/configs/imx93-phyboard-nash_defconfig
+index dcde7c84bd..d002498358 100644
+--- a/configs/imx93-phyboard-nash_defconfig
++++ b/configs/imx93-phyboard-nash_defconfig
+@@ -12,7 +12,9 @@ CONFIG_DM_GPIO=y
+ CONFIG_DEFAULT_DEVICE_TREE="imx93-phyboard-nash"
+ CONFIG_SPL_TEXT_BASE=0x2049A000
+ CONFIG_TARGET_PHYCORE_IMX93=y
+-CONFIG_PHYTEC_SOM_DETECTION=y
++CONFIG_PHYTEC_SOM_DETECTION=n
++CONFIG_PHYCORE_IMX93_RAM_TYPE_FIX=y
++CONFIG_PHYCORE_IMX93_RAM_TYPE_LPDDR4X_1GB=y
+ CONFIG_SYS_PROMPT="u-boot=> "
+ CONFIG_SPL_SERIAL=y
+ CONFIG_SPL_DRIVERS_MISC=y
+-- 
+2.25.1
+
