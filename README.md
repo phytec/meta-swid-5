@@ -7,7 +7,7 @@ This is a short description of the steps to take to build the BSP
 
 Build
 -----
-Follow the steps bellow to build the BSP with ADIN1300 support.
+Follow the steps bellow to build the BSP.
 
 1. Create an empty folder to build the BSP in.
    host$ mkdir ~/yocto
