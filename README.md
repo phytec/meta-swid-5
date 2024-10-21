@@ -13,7 +13,7 @@ Follow the steps bellow to build the BSP.
    host$ mkdir ~/yocto
    host$ cd ~/yocto
 
-2. Get our phyLinux script to check out the BSP-Yocto-Ampliphy-i.MX6-PD21.1.0
+2. Get our phyLinux script to check out the BSP-Yocto-NXP-i.MX93-PD24.1.1
    BSP.
    host$ wget https://download.phytec.de/Software/Linux/Yocto/Tools/phyLinux
    host$ chmod +x phyLinux
