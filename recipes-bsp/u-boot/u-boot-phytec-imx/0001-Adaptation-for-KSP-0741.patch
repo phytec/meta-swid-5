@@ -1,0 +1,274 @@
+From 9103583e27e68d0424fc8af8b220024f35ff1829 Mon Sep 17 00:00:00 2001
+From: Nicolas Raimundo <n.raimundo@phytec.fr>
+Date: Fri, 16 Oct 2026 14:37:09 +0200
+Subject: [PATCH] Adaptation for KSP-0741
+
+Upstream-Status: Inappropriate [custom adaptation]
+
+Signed-off-by: Nicolas Raimundo <n.raimundo@phytec.fr>
+---
+ arch/arm/dts/imx93-phyboard-segin.dts         | 71 ++++++++++++++-----
+ arch/arm/dts/imx93-phycore-som.dtsi           | 53 +-------------
+ .../phycore_imx91_93/phycore-imx91-93.c       |  5 +-
+ configs/imx93-phycore_defconfig               |  2 +-
+ 4 files changed, 61 insertions(+), 70 deletions(-)
+
+diff --git a/arch/arm/dts/imx93-phyboard-segin.dts b/arch/arm/dts/imx93-phyboard-segin.dts
+index e36e74ea1fb..d25fd1189b6 100644
+--- a/arch/arm/dts/imx93-phyboard-segin.dts
++++ b/arch/arm/dts/imx93-phyboard-segin.dts
+@@ -33,7 +33,7 @@
+ 		max-bitrate = <1000000>;
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_flexcan1_tc>;
+-		enable-gpios = <&gpio4 16 GPIO_ACTIVE_HIGH>;
++		enable-gpios = <&gpio2 24 GPIO_ACTIVE_HIGH>;
+ 	};
+ 
+ 	reg_sound_1v8: regulator-sound-1v8 {
+@@ -108,11 +108,6 @@
+ 	};
+ };
+ 
+-/* Ethernet */
+-&ethphy1 {
+-	ti,leds-polarity = <0>;
+-};
+-
+ &eqos {
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_eqos>;
+@@ -124,15 +119,35 @@
+ 	status = "okay";
+ };
+ 
+-&mdio {
+-	ethphy2: ethernet-phy@2 {
+-		compatible = "ethernet-phy-id0022.1561";
+-		reg = <2>;
+-		clocks = <&clk IMX93_CLK_ENET_REF_PHY>;
+-		clock-names = "rmii-ref";
+-		micrel,led-mode = <1>;
+-	};
+-};
++
++&fec {
++	phy-mode = "rgmii-id";
++	phy-handle = <&ethphy1>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_fec>;
++	status = "okay";
++
++
++	mdio: mdio {
++		clock-frequency = <5000000>;
++
++		ethphy1: ethernet-phy@1 {
++			compatible = "ethernet-phy-ieee802.3-c22";
++			reg = <0>;
++			clocks = <&clk IMX93_CLK_ENET_REF_PHY>;
++			clock-names = "rmii-ref";
++			micrel,led-mode = <1>;
++		};
++
++		ethphy2: ethernet-phy@2 {
++			compatible = "ethernet-phy-ieee802.3-c22";
++			reg = <2>;
++			clocks = <&clk IMX93_CLK_ENET_REF_PHY>;
++			clock-names = "rmii-ref";
++			micrel,led-mode = <1>;
++		};
++ 	};
++ };
+ 
+ /* CAN */
+ &flexcan1 {
+@@ -170,7 +185,7 @@
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_rtc>;
+ 		interrupt-parent = <&gpio4>;
+-		interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
++		interrupts = <28 IRQ_TYPE_LEVEL_LOW>;
+ 	};
+ };
+ 
+@@ -244,6 +259,26 @@
+ 		>;
+ 	};
+ 
++	pinctrl_fec: fecgrp {
++		fsl,pins = <
++			MX93_PAD_ENET2_RD0__ENET1_RGMII_RD0		0x57e
++			MX93_PAD_ENET2_RD1__ENET1_RGMII_RD1		0x57e
++			MX93_PAD_ENET2_RD2__ENET1_RGMII_RD2		0x57e
++			MX93_PAD_ENET2_RD3__ENET1_RGMII_RD3		0x57e
++			MX93_PAD_ENET2_RXC__ENET1_RGMII_RXC   0x5fe
++			MX93_PAD_ENET2_RX_CTL__ENET1_RGMII_RX_CTL	0x57e
++			MX93_PAD_ENET2_TD0__ENET1_RGMII_TD0		0x51e
++			MX93_PAD_ENET2_TD1__ENET1_RGMII_TD1		0x51e
++			MX93_PAD_ENET2_TD2__ENET1_RGMII_TD2		0x50e
++			MX93_PAD_ENET2_TD3__ENET1_RGMII_TD3		0x50e
++			MX93_PAD_ENET2_TXC__ENET1_RGMII_TXC   0x58e
++			MX93_PAD_ENET2_TX_CTL__ENET1_RGMII_TX_CTL	0x58e
++			MX93_PAD_CCM_CLKO4__GPIO4_IO29 0x1002
++			MX93_PAD_ENET2_MDC__ENET1_MDC			0x50e
++			MX93_PAD_ENET2_MDIO__ENET1_MDIO			0x502
++		>;
++	};
++
+ 	pinctrl_flexcan1: flexcan1grp {
+ 		fsl,pins = <
+ 			MX93_PAD_PDM_BIT_STREAM0__CAN1_RX	0x139e
+@@ -253,7 +288,7 @@
+ 
+ 	pinctrl_flexcan1_tc: flexcan1tcgrp {
+ 		fsl,pins = <
+-			MX93_PAD_ENET2_TD3__GPIO4_IO16		0x31e
++			MX93_PAD_GPIO_IO24__GPIO2_IO24		0x31e
+ 		>;
+ 	};
+ 
+@@ -279,7 +314,7 @@
+ 
+ 	pinctrl_rtc: rtcgrp {
+ 		fsl,pins = <
+-			MX93_PAD_ENET2_RD2__GPIO4_IO26		0x31e
++			MX93_PAD_CCM_CLKO3__GPIO4_IO28		0x31e
+ 		>;
+ 	};
+ 
+diff --git a/arch/arm/dts/imx93-phycore-som.dtsi b/arch/arm/dts/imx93-phycore-som.dtsi
+index 40c5329f10e..a7dddf350c9 100644
+--- a/arch/arm/dts/imx93-phycore-som.dtsi
++++ b/arch/arm/dts/imx93-phycore-som.dtsi
+@@ -82,35 +82,6 @@
+  *	};
+  */
+ 
+-/* Ethernet */
+-&fec {
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&pinctrl_fec>;
+-	phy-mode = "rmii";
+-	phy-handle = <&ethphy1>;
+-	assigned-clocks = <&clk IMX93_CLK_ENET_TIMER1>,
+-			  <&clk IMX93_CLK_ENET_REF>,
+-			  <&clk IMX93_CLK_ENET_REF_PHY>;
+-	assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>,
+-				 <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>,
+-				 <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
+-	assigned-clock-rates = <100000000>, <50000000>, <50000000>;
+-	status = "okay";
+-
+-	mdio: mdio {
+-		clock-frequency = <5000000>;
+-		#address-cells = <1>;
+-		#size-cells = <0>;
+-
+-		ethphy1: ethernet-phy@1 {
+-			compatible = "ethernet-phy-ieee802.3-c22";
+-			reg = <1>;
+-			reset-gpios = <&gpio4 23 GPIO_ACTIVE_HIGH>;
+-			reset-assert-us = <30>;
+-		};
+-	};
+-};
+-
+ /* I2C3 */
+ &lpi2c3 {
+ 	clock-frequency = <400000>;
+@@ -126,8 +97,8 @@
+ 		reg = <0x25>;
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_pmic>;
+-		interrupt-parent = <&gpio4>;
+-		interrupts = <27 IRQ_TYPE_LEVEL_LOW>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <10 IRQ_TYPE_LEVEL_LOW>;
+ 
+ 		regulators {
+ 			buck1: BUCK1 {
+@@ -238,24 +209,6 @@
+ };
+ 
+ &iomuxc {
+-	pinctrl_fec: fecgrp {
+-		fsl,pins = <
+-			MX93_PAD_ENET2_MDC__ENET1_MDC			0x50e
+-			MX93_PAD_ENET2_MDIO__ENET1_MDIO			0x502
+-			/* the three pins below are connected to PHYs straps,
+-			 * that is what the pull-up/down setting is for.
+-			 */
+-			MX93_PAD_ENET2_RD0__ENET1_RGMII_RD0		0x37e
+-			MX93_PAD_ENET2_RD1__ENET1_RGMII_RD1		0x37e
+-			MX93_PAD_ENET2_RX_CTL__ENET1_RGMII_RX_CTL	0x57e
+-			MX93_PAD_ENET2_TD0__ENET1_RGMII_TD0		0x50e
+-			MX93_PAD_ENET2_TD1__ENET1_RGMII_TD1		0x50e
+-			MX93_PAD_ENET2_TX_CTL__ENET1_RGMII_TX_CTL	0x50e
+-			MX93_PAD_ENET2_TD2__ENET1_TX_CLK		0x4000050e
+-			MX93_PAD_ENET2_RXC__GPIO4_IO23			0x502
+-		>;
+-	};
+-
+ 	pinctrl_leds: ledsgrp {
+ 		fsl,pins = <
+ 			MX93_PAD_I2C1_SDA__GPIO1_IO01		0x11e
+@@ -278,7 +231,7 @@
+ 
+ 	pinctrl_pmic: pmicgrp {
+ 		fsl,pins = <
+-			MX93_PAD_ENET2_RD3__GPIO4_IO27		0x31e
++			MX93_PAD_PDM_BIT_STREAM1__GPIO1_IO10		0x31e
+ 		>;
+ 	};
+ 
+diff --git a/board/phytec/phycore_imx91_93/phycore-imx91-93.c b/board/phytec/phycore_imx91_93/phycore-imx91-93.c
+index dbaf6d6aaf6..b9597e31bd7 100644
+--- a/board/phytec/phycore_imx91_93/phycore-imx91-93.c
++++ b/board/phytec/phycore_imx91_93/phycore-imx91-93.c
+@@ -22,11 +22,12 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ int board_init(void)
+ {
++#if IS_ENABLED(CONFIG_PHYTEC_IMX91_93_SOM_DETECTION)
+ 	int ret = phytec_eeprom_data_setup(NULL, 2, EEPROM_ADDR);
+ 
+ 	if (ret)
+ 		printf("%s: EEPROM data init failed\n", __func__);
+-
++#endif
+ 	return 0;
+ }
+ 
+@@ -176,6 +177,7 @@ static void ethphy_fixup(void *blob, struct phytec_eeprom_data *data)
+ 
+ int board_fix_fdt(void *blob)
+ {
++#if IS_ENABLED(CONFIG_PHYTEC_IMX91_93_SOM_DETECTION)
+ 	struct phytec_eeprom_data data;
+ 
+ 	phytec_eeprom_data_setup(&data, 2, EEPROM_ADDR);
+@@ -183,6 +185,7 @@ int board_fix_fdt(void *blob)
+ 	emmc_fixup(blob, &data);
+ 
+ 	ethphy_fixup(blob, &data);
++#endif
+ 
+ 	/* Update dtb clocks for low drive mode */
+ 	if (is_voltage_mode(VOLT_LOW_DRIVE))
+diff --git a/configs/imx93-phycore_defconfig b/configs/imx93-phycore_defconfig
+index f66c1b1567d..cdfe94d65ce 100644
+--- a/configs/imx93-phycore_defconfig
++++ b/configs/imx93-phycore_defconfig
+@@ -6,7 +6,7 @@ CONFIG_SYS_MALLOC_F_LEN=0x20000
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+ CONFIG_NR_DRAM_BANKS=2
+-CONFIG_PHYTEC_SOM_DETECTION=y
++CONFIG_PHYTEC_SOM_DETECTION=n
+ CONFIG_ENV_SOURCE_FILE="phycore_imx91_93"
+ CONFIG_ENV_SIZE=0x10000
+ CONFIG_ENV_OFFSET=0x700000
+-- 
+2.43.0
+
